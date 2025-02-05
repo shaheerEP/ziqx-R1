@@ -33,7 +33,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto">
       <div className="p-4 bg-white border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-blue-600">Deepseek R1</h1>
+        <h1 className="text-2xl font-bold text-blue-600">ziqx-R1</h1>
         <p className="text-gray-600 text-sm">AI Assistant</p>
       </div>
 
