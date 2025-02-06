@@ -4,7 +4,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full">
       <head>
-        <title>Deepseek R1 Chat</title>
+        <title>Ziqx-R1</title>
         <meta name="description" content="Chat with Deepseek R1 AI model" />
         <link rel="icon" href="/favicon.ico" />
       </head>

@@ -1,61 +1,65 @@
-import axios from 'axios';
+export const sendMessage = async (prompt, previousMessages = [], onChunk) => {
+  try {
+    const fullPrompt = previousMessages
+      .map((msg) => msg.sender === 'user' ? `User: ${msg.text}` : `Assistant: ${msg.text}`)
+      .join('\n') + `\nUser: ${prompt}`;
 
-export const sendMessage = async (prompt, previousMessages = []) => {
-    try {
-      // Prepare the full prompt by including previous messages
-      const fullPrompt = previousMessages
-        .map((msg) => msg.sender === 'user' ? `User: ${msg.text}` : `Assistant: ${msg.text}`)
-        .join('\n') + `\nUser: ${prompt}`;
-  
-      const response = await axios.post(
-        'https://api.ai.ziqx.net/generate',
-        { prompt: fullPrompt },
-        { responseType: 'stream' } // Handle streaming response
-      );
-  
-      let buffer = ''; // Buffer to accumulate chunks
-      let fullResponse = ''; // Final response string
-      let thinkContent = ''; // Content inside <think> tags
-  
-      for await (const chunk of response.data) {
-        buffer += chunk.toString(); // Append the current chunk to the buffer
-  
-        // Try to parse the buffer as JSON
+    const response = await fetch('https://api.ai.ziqx.net/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: fullPrompt }),
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      while (true) {
+        const lineEndIndex = buffer.indexOf('\n');
+        if (lineEndIndex === -1) break;
+
+        const line = buffer.slice(0, lineEndIndex).trim();
+        buffer = buffer.slice(lineEndIndex + 1);
+
         try {
-          const parsedChunk = JSON.parse(buffer);
-  
+          const parsedChunk = JSON.parse(line);
           if (parsedChunk.response) {
-            // Extract content inside <think> tags
             const thinkMatch = parsedChunk.response.match(/<think>(.*?)<\/think>/s);
-            if (thinkMatch) {
-              thinkContent += thinkMatch[1].trim(); // Append the extracted content
-            }
-  
-            // Remove content between <think> and </think>
-            const cleanedResponse = parsedChunk.response.replace(/<think>.*?<\/think>/gs, '').trim();
-  
-            // Ensure proper spacing between chunks
-            if (fullResponse && cleanedResponse && !/\s$/.test(fullResponse) && !/^\s/.test(cleanedResponse)) {
-              fullResponse += ' '; // Add a space if needed
-            }
-  
-            fullResponse += cleanedResponse; // Append the cleaned response text
+            const thinkContent = thinkMatch ? thinkMatch[1].trim() : '';
+            
+            // Replace think tags with empty string and clean spaces
+// Replace think tags with empty string and trim
+const cleanedResponse = parsedChunk.response
+  .replace(/<think>(.*?)<\/think>/gs, '')  // Remove think tags
+  .trim();  // Only trim leading/trailing spaces
+
+            onChunk({
+              response: cleanedResponse,
+              think: thinkContent
+            });
           }
-  
-          // Clear the buffer after successfully parsing a chunk
-          buffer = '';
-  
-          // Stop processing if the API indicates the response is done
-          if (parsedChunk.done) break;
-        } catch (parseError) {
-          // If parsing fails, it means the buffer contains incomplete JSON
-          continue;
+        } catch (error) {
+          console.error('Error parsing chunk:', error);
         }
       }
-  
-      return { response: fullResponse.trim(), think: thinkContent.trim() };
-    } catch (error) {
-      console.error('Error fetching response from API:', error);
-      return { response: 'Sorry, there was an error processing your request.', think: '' };
     }
-  };
+
+    if (buffer.trim()) {
+      try {
+        const parsedChunk = JSON.parse(buffer);
+        // Handle final chunk if needed
+      } catch (error) {
+        console.error('Error parsing final chunk:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    onChunk({ response: 'Error processing request', think: '' });
+  }
+};
