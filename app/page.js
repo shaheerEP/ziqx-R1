@@ -14,7 +14,7 @@ export default function Home() {
     setLoading(true);
     isFirstChunk.current = true;
     const userEntry = { sender: 'user', text: userMessage };
-    botId.current = Date.now(); // Generate new ID for each bot message
+    botId.current = Date.now();
     const botEntry = { sender: 'bot', text: '', id: botId.current };
     setMessages(prev => [...prev, userEntry, botEntry]);
 
@@ -24,19 +24,13 @@ export default function Home() {
         const lastBotIndex = newMessages.findIndex(msg => msg.id === botId.current);
 
         if (response && lastBotIndex !== -1) {
-          const currentText = newMessages[lastBotIndex].text;
-          
-          // Add space if needed between chunks
-          const shouldAddSpace = currentText.length > 0 && 
-                               !currentText.endsWith(' ') && 
-                               !response.startsWith(' ');
-
           newMessages[lastBotIndex] = {
             ...newMessages[lastBotIndex],
-            text: currentText + (shouldAddSpace ? ' ' : '') + response
+            text: newMessages[lastBotIndex].text + response
           };
         }
 
+        // Handle think messages
         if (think) {
           const thinkIndex = lastBotIndex + 1;
           if (newMessages[thinkIndex]?.sender === 'bot-think') {
@@ -58,7 +52,6 @@ export default function Home() {
       }
     });
 
-    // Fallback in case no chunks were processed
     if (isFirstChunk.current) {
       setLoading(false);
       isFirstChunk.current = false;
