@@ -38,9 +38,6 @@ export const sendMessage = async (prompt, previousMessages = [], onChunk) => {
 const cleanedResponse = parsedChunk.response
   .replace(/<think>(.*?)<\/think>/gs, '')  // Remove think tags
   .trim();  // Only trim leading/trailing spaces
-
-
-
   
             onChunk({
               response: cleanedResponse,
